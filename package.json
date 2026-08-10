@@ -1,0 +1,60 @@
+{
+  "name": "logikhata-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared scalable backend for LogiKhata web, React Native, and Flutter clients.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "worker:dev": "tsx watch src/workers/domain-events.worker.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "worker:start": "node dist/src/workers/domain-events.worker.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
+    "keys:generate": "node scripts/generate-jwt-keys.mjs",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
+    "argon2": "^0.44.0",
+    "bullmq": "^5.58.0",
+    "compression": "^1.8.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.0",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.0",
+    "pino": "^9.9.0",
+    "pino-http": "^10.5.0",
+    "socket.io": "^4.8.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.7.5",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.5",
+    "prisma": "^7.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

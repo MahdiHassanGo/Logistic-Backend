@@ -1,0 +1,561 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MANAGER
+  ACCOUNTANT
+  OPERATOR
+  DRIVER
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+enum ClientType {
+  WEB
+  MOBILE
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PurchaseStatus {
+  DRAFT
+  CONFIRMED
+  VOIDED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  VOIDED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  MOBILE_BANKING
+  CHEQUE
+  OTHER
+}
+
+enum PaymentStatus {
+  CONFIRMED
+  REVERSED
+}
+
+enum LedgerEntryType {
+  OPENING_BALANCE
+  PURCHASE
+  PAYMENT
+  DEBIT_ADJUSTMENT
+  CREDIT_ADJUSTMENT
+  REVERSAL
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  INACTIVE
+}
+
+enum IdempotencyStatus {
+  PROCESSING
+  COMPLETED
+}
+
+model Shop {
+  id                String                @id @default(uuid())
+  name              String
+  code              String                @unique
+  address           String?
+  phone             String?
+  ownerId           String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  owner             User?                 @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  users             User[]                @relation("ShopUsers")
+  customers         Customer[]
+  productCategories ProductCategory[]
+  products          Product[]
+  purchases         Purchase[]
+  invoices          Invoice[]
+  payments          Payment[]
+  drivers           Driver[]
+  vehicles          Vehicle[]
+  deliveries        Delivery[]
+  ledgerEntries     CustomerLedgerEntry[]
+  idempotencyKeys   IdempotencyKey[]
+  auditLogs         AuditLog[]
+
+  @@index([code])
+}
+
+model User {
+  id                  String                   @id @default(uuid())
+  shopId              String
+  name                String
+  username            String                   @unique
+  email               String?                  @unique
+  phone               String?                  @unique
+  passwordHash        String
+  role                UserRole                 @default(OPERATOR)
+  status              UserStatus               @default(ACTIVE)
+  lastLoginAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  deletedAt           DateTime?
+  shop                Shop                     @relation("ShopUsers", fields: [shopId], references: [id], onDelete: Restrict)
+  ownedShops          Shop[]                   @relation("ShopOwner")
+  refreshSessions     RefreshSession[]
+  permissionOverrides UserPermissionOverride[]
+  createdCustomers    Customer[]               @relation("CustomerCreator")
+  createdProducts     Product[]                @relation("ProductCreator")
+  createdPurchases    Purchase[]               @relation("PurchaseCreator")
+  createdInvoices     Invoice[]                @relation("InvoiceCreator")
+  collectedPayments   Payment[]                @relation("PaymentCollector")
+  reversedPayments    Payment[]                @relation("PaymentReverser")
+  deliveryActions     DeliveryStatusHistory[]  @relation("DeliveryStatusActor")
+  auditLogs           AuditLog[]               @relation("AuditActor")
+  driver              Driver?
+
+  @@index([shopId])
+  @@index([role, status])
+  @@index([deletedAt])
+}
+
+model Permission {
+  id            String                   @id @default(uuid())
+  key           String                   @unique
+  description   String?
+  createdAt     DateTime                 @default(now())
+  roleMappings  RolePermission[]
+  userOverrides UserPermissionOverride[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  role         UserRole
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
+}
+
+model UserPermissionOverride {
+  id           String     @id @default(uuid())
+  userId       String
+  permissionId String
+  allow        Boolean
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+}
+
+model RefreshSession {
+  id                  String     @id @default(uuid())
+  userId              String
+  tokenHash           String     @unique
+  familyId            String
+  clientType          ClientType
+  userAgent           String?
+  ipAddress           String?
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedByTokenHash String?
+  createdAt           DateTime   @default(now())
+  lastUsedAt          DateTime?
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([familyId])
+}
+
+model Customer {
+  id             String                @id @default(uuid())
+  shopId         String
+  customerCode   String
+  name           String
+  phone          String
+  alternatePhone String?
+  businessName   String?
+  address        String?
+  area           String?
+  district       String?
+  notes          String?
+  creditLimit    Decimal               @default(0) @db.Decimal(18, 2)
+  currentBalance Decimal               @default(0) @db.Decimal(18, 2)
+  status         CustomerStatus        @default(ACTIVE)
+  avatarUrl      String?
+  createdById    String
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  deletedAt      DateTime?
+  shop           Shop                  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdBy      User                  @relation("CustomerCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  purchases      Purchase[]
+  invoices       Invoice[]
+  payments       Payment[]
+  ledgerEntries  CustomerLedgerEntry[]
+  deliveries     Delivery[]
+
+  @@unique([shopId, customerCode])
+  @@unique([shopId, phone])
+  @@index([shopId])
+  @@index([name])
+  @@index([phone])
+  @@index([status, deletedAt])
+  @@index([currentBalance])
+}
+
+model ProductCategory {
+  id        String    @id @default(uuid())
+  shopId    String
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([shopId, name])
+  @@index([shopId])
+}
+
+model Product {
+  id            String           @id @default(uuid())
+  shopId        String
+  code          String
+  categoryId    String?
+  name          String
+  description   String?
+  unit          String
+  defaultPrice  Decimal          @db.Decimal(18, 2)
+  isActive      Boolean          @default(true)
+  createdById   String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  deletedAt     DateTime?
+  shop          Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  category      ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdBy     User             @relation("ProductCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  purchaseItems PurchaseItem[]
+
+  @@unique([shopId, code])
+  @@index([shopId])
+  @@index([name])
+  @@index([categoryId, isActive])
+  @@index([deletedAt])
+}
+
+model Purchase {
+  id                       String         @id @default(uuid())
+  shopId                   String
+  purchaseNumber           String
+  customerId               String
+  purchaseDate             DateTime       @default(now())
+  subtotal                 Decimal        @db.Decimal(18, 2)
+  discount                 Decimal        @default(0) @db.Decimal(18, 2)
+  netAmount                Decimal        @db.Decimal(18, 2)
+  previousBalanceSnapshot  Decimal        @db.Decimal(18, 2)
+  initialPaidAmount        Decimal        @default(0) @db.Decimal(18, 2)
+  resultingBalanceSnapshot Decimal        @db.Decimal(18, 2)
+  notes                    String?
+  status                   PurchaseStatus @default(CONFIRMED)
+  version                  Int            @default(1)
+  createdById              String
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  shop                     Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer                 Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy                User           @relation("PurchaseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  items                    PurchaseItem[]
+  invoice                  Invoice?
+  delivery                 Delivery?
+
+  @@unique([shopId, purchaseNumber])
+  @@index([shopId])
+  @@index([customerId, purchaseDate])
+  @@index([status, purchaseDate])
+}
+
+model PurchaseItem {
+  id           String   @id @default(uuid())
+  purchaseId   String
+  productId    String?
+  nameSnapshot String
+  unitSnapshot String
+  quantity     Decimal  @db.Decimal(18, 3)
+  unitPrice    Decimal  @db.Decimal(18, 2)
+  discount     Decimal  @default(0) @db.Decimal(18, 2)
+  lineTotal    Decimal  @db.Decimal(18, 2)
+  note         String?
+  purchase     Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseId])
+  @@index([productId])
+}
+
+model Invoice {
+  id                  String              @id @default(uuid())
+  shopId              String
+  invoiceNumber       String
+  purchaseId          String              @unique
+  customerId          String
+  invoiceDate         DateTime            @default(now())
+  subtotal            Decimal             @db.Decimal(18, 2)
+  discount            Decimal             @default(0) @db.Decimal(18, 2)
+  previousDueSnapshot Decimal             @db.Decimal(18, 2)
+  grandTotal          Decimal             @db.Decimal(18, 2)
+  paidAmount          Decimal             @default(0) @db.Decimal(18, 2)
+  currentDue          Decimal             @db.Decimal(18, 2)
+  status              InvoiceStatus       @default(UNPAID)
+  companySnapshot     Json?
+  customerSnapshot    Json
+  footer              String?
+  pdfUrl              String?
+  createdById         String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  shop                Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  purchase            Purchase            @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  customer            Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy           User                @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  allocations         PaymentAllocation[]
+  delivery            Delivery?
+
+  @@unique([shopId, invoiceNumber])
+  @@index([shopId])
+  @@index([customerId, status, invoiceDate])
+  @@index([currentDue])
+}
+
+model Payment {
+  id             String              @id @default(uuid())
+  shopId         String
+  receiptNumber  String
+  customerId     String
+  paymentDate    DateTime            @default(now())
+  amount         Decimal             @db.Decimal(18, 2)
+  method         PaymentMethod
+  reference      String?
+  note           String?
+  status         PaymentStatus       @default(CONFIRMED)
+  attachmentUrl  String?
+  collectedById  String
+  reversedAt     DateTime?
+  reversedById   String?
+  reversalReason String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  shop           Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer       Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  collectedBy    User                @relation("PaymentCollector", fields: [collectedById], references: [id], onDelete: Restrict)
+  reversedBy     User?               @relation("PaymentReverser", fields: [reversedById], references: [id], onDelete: Restrict)
+  allocations    PaymentAllocation[]
+
+  @@unique([shopId, receiptNumber])
+  @@index([shopId])
+  @@index([customerId, paymentDate])
+  @@index([status, paymentDate])
+}
+
+model PaymentAllocation {
+  id        String  @id @default(uuid())
+  paymentId String
+  invoiceId String
+  amount    Decimal @db.Decimal(18, 2)
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, invoiceId])
+  @@index([invoiceId])
+}
+
+model CustomerLedgerEntry {
+  id           String          @id @default(uuid())
+  shopId       String
+  customerId   String
+  entryDate    DateTime        @default(now())
+  type         LedgerEntryType
+  debit        Decimal         @default(0) @db.Decimal(18, 2)
+  credit       Decimal         @default(0) @db.Decimal(18, 2)
+  balanceAfter Decimal         @db.Decimal(18, 2)
+  sourceType   String
+  sourceId     String
+  description  String?
+  createdById  String
+  reversalOfId String?
+  createdAt    DateTime        @default(now())
+  shop         Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([shopId])
+  @@index([customerId, entryDate])
+  @@index([sourceType, sourceId])
+}
+
+model Driver {
+  id         String       @id @default(uuid())
+  shopId     String
+  userId     String?      @unique
+  driverCode String
+  name       String
+  phone      String
+  licenseNo  String?
+  status     DriverStatus @default(ACTIVE)
+  notes      String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  shop       Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deliveries Delivery[]
+
+  @@unique([shopId, driverCode])
+  @@unique([shopId, phone])
+  @@index([shopId])
+}
+
+model Vehicle {
+  id                 String        @id @default(uuid())
+  shopId             String
+  registrationNumber String
+  type               String
+  capacity           Decimal?      @db.Decimal(18, 2)
+  status             VehicleStatus @default(AVAILABLE)
+  notes              String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  shop               Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  deliveries         Delivery[]
+
+  @@unique([shopId, registrationNumber])
+  @@index([shopId])
+}
+
+model Delivery {
+  id              String                  @id @default(uuid())
+  shopId          String
+  deliveryNumber  String
+  purchaseId      String?                 @unique
+  invoiceId       String?                 @unique
+  customerId      String
+  driverId        String?
+  vehicleId       String?
+  addressSnapshot String
+  contactSnapshot String
+  scheduledAt     DateTime?
+  status          DeliveryStatus          @default(PENDING)
+  transportCharge Decimal                 @default(0) @db.Decimal(18, 2)
+  notes           String?
+  startedAt       DateTime?
+  deliveredAt     DateTime?
+  proofUrl        String?
+  receiverName    String?
+  version         Int                     @default(1)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  shop            Shop                    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  purchase        Purchase?               @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  invoice         Invoice?                @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  customer        Customer                @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  driver          Driver?                 @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicle         Vehicle?                @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  history         DeliveryStatusHistory[]
+
+  @@unique([shopId, deliveryNumber])
+  @@index([shopId])
+  @@index([status, scheduledAt])
+  @@index([driverId, status])
+  @@index([vehicleId, status])
+  @@index([customerId, createdAt])
+}
+
+model DeliveryStatusHistory {
+  id         String         @id @default(uuid())
+  deliveryId String
+  fromStatus DeliveryStatus?
+  toStatus   DeliveryStatus
+  actorId    String
+  note       String?
+  latitude   Decimal?       @db.Decimal(10, 7)
+  longitude  Decimal?       @db.Decimal(10, 7)
+  createdAt  DateTime       @default(now())
+  delivery   Delivery       @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  actor      User           @relation("DeliveryStatusActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([deliveryId, createdAt])
+}
+
+model IdempotencyKey {
+  id             String            @id @default(uuid())
+  shopId         String
+  actorId        String
+  scope          String
+  key            String
+  requestHash    String
+  status         IdempotencyStatus @default(PROCESSING)
+  responseStatus Int?
+  responseBody   Json?
+  expiresAt      DateTime
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  shop           Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, actorId, scope, key])
+  @@index([shopId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  shopId     String?
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  requestId  String?
+  createdAt  DateTime @default(now())
+  shop       Shop?    @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([shopId])
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@index([action, createdAt])
+}
