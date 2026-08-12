@@ -30,4 +30,5 @@ v1Router.use("/deliveries", deliveryRouter);
 v1Router.use("/dashboard", dashboardRouter);
 v1Router.use("/reports", reportRouter);
 v1Router.use("/sms", smsRouter);
+v1Router.use("/sms-messages", smsRouter);
 v1Router.use("/settings", settingsRouter);

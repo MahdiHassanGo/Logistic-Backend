@@ -13,6 +13,13 @@ import { resendSmsSchema, smsHistoryQuerySchema, smsSettingsSchema } from "./sms
 export const smsRouter = Router();
 
 smsRouter.get(
+  "/",
+  requirePermission(PERMISSIONS.SMS_RESEND),
+  validate({ query: smsHistoryQuerySchema }),
+  getSmsHistoryController
+);
+
+smsRouter.get(
   "/history",
   requirePermission(PERMISSIONS.SMS_RESEND),
   validate({ query: smsHistoryQuerySchema }),
