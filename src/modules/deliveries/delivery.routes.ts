@@ -9,7 +9,11 @@ import {
   createVehicleController,
   getDeliveryController,
   listDeliveriesController,
-  updateDeliveryStatusController
+  listDriversController,
+  listVehiclesController,
+  updateDeliveryStatusController,
+  updateDriverController,
+  updateVehicleController
 } from "./delivery.controller.js";
 import {
   createDeliverySchema,
@@ -17,21 +21,53 @@ import {
   createVehicleSchema,
   deliveryIdParamsSchema,
   deliveryListQuerySchema,
-  updateDeliveryStatusSchema
+  driverIdParamsSchema,
+  driverListQuerySchema,
+  updateDeliveryStatusSchema,
+  updateDriverSchema,
+  updateVehicleSchema,
+  vehicleIdParamsSchema,
+  vehicleListQuerySchema
 } from "./delivery.schemas.js";
 
 export const deliveryRouter = Router();
+
+deliveryRouter.get(
+  "/drivers",
+  requirePermission(PERMISSIONS.DELIVERY_READ),
+  validate({ query: driverListQuerySchema }),
+  listDriversController
+);
 deliveryRouter.post(
   "/drivers",
   requirePermission(PERMISSIONS.DELIVERY_ASSIGN),
   validate({ body: createDriverSchema }),
   createDriverController
 );
+deliveryRouter.patch(
+  "/drivers/:id",
+  requirePermission(PERMISSIONS.DRIVER_UPDATE),
+  validate({ params: driverIdParamsSchema, body: updateDriverSchema }),
+  updateDriverController
+);
+
+deliveryRouter.get(
+  "/vehicles",
+  requirePermission(PERMISSIONS.DELIVERY_READ),
+  validate({ query: vehicleListQuerySchema }),
+  listVehiclesController
+);
 deliveryRouter.post(
   "/vehicles",
   requirePermission(PERMISSIONS.DELIVERY_ASSIGN),
   validate({ body: createVehicleSchema }),
   createVehicleController
+);
+deliveryRouter.patch(
+  "/vehicles/:id",
+  requirePermission(PERMISSIONS.VEHICLE_UPDATE),
+  validate({ params: vehicleIdParamsSchema, body: updateVehicleSchema }),
+  updateVehicleController
 );
 deliveryRouter.get(
   "/",

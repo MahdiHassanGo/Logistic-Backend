@@ -45,6 +45,120 @@ export async function createVehicle(
   });
 }
 
+export async function listDrivers(
+  shopId: string,
+  input: {
+    page: number;
+    limit: number;
+    status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
+    search?: string;
+  }
+) {
+  const where: Prisma.DriverWhereInput = {
+    shopId,
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.search
+      ? {
+          OR: [
+            { name: { contains: input.search, mode: "insensitive" } },
+            { phone: { contains: input.search, mode: "insensitive" } },
+            { driverCode: { contains: input.search, mode: "insensitive" } }
+          ]
+        }
+      : {})
+  };
+  const [items, total] = await prisma.$transaction([
+    prisma.driver.findMany({
+      where,
+      include: { user: { select: { id: true, name: true, username: true, role: true } } },
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit
+    }),
+    prisma.driver.count({ where })
+  ]);
+  return { items, total, page: input.page, limit: input.limit, pages: Math.ceil(total / input.limit) };
+}
+
+export async function updateDriver(
+  id: string,
+  shopId: string,
+  input: {
+    userId?: string | null;
+    driverCode?: string;
+    name?: string;
+    phone?: string;
+    licenseNo?: string | null;
+    status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
+    notes?: string | null;
+  }
+) {
+  const driver = await prisma.driver.findFirst({ where: { id, shopId } });
+  if (!driver) throw errors.notFound("Driver");
+
+  return prisma.driver.update({
+    where: { id },
+    data: { ...input }
+  });
+}
+
+export async function listVehicles(
+  shopId: string,
+  input: {
+    page: number;
+    limit: number;
+    status?: "AVAILABLE" | "IN_USE" | "MAINTENANCE" | "INACTIVE";
+    search?: string;
+  }
+) {
+  const where: Prisma.VehicleWhereInput = {
+    shopId,
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.search
+      ? {
+          OR: [
+            { registrationNumber: { contains: input.search, mode: "insensitive" } },
+            { type: { contains: input.search, mode: "insensitive" } }
+          ]
+        }
+      : {})
+  };
+  const [items, total] = await prisma.$transaction([
+    prisma.vehicle.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (input.page - 1) * input.limit,
+      take: input.limit
+    }),
+    prisma.vehicle.count({ where })
+  ]);
+  return { items, total, page: input.page, limit: input.limit, pages: Math.ceil(total / input.limit) };
+}
+
+export async function updateVehicle(
+  id: string,
+  shopId: string,
+  input: {
+    registrationNumber?: string;
+    type?: string;
+    capacity?: string | null;
+    status?: "AVAILABLE" | "IN_USE" | "MAINTENANCE" | "INACTIVE";
+    notes?: string | null;
+  }
+) {
+  const vehicle = await prisma.vehicle.findFirst({ where: { id, shopId } });
+  if (!vehicle) throw errors.notFound("Vehicle");
+
+  const { capacity, ...rest } = input;
+  return prisma.vehicle.update({
+    where: { id },
+    data: {
+      ...rest,
+      capacity: capacity === null ? null : capacity !== undefined ? new Prisma.Decimal(capacity) : undefined
+    }
+  });
+}
+
 async function assertResourcesAvailable(
   input: {
     shopId: string;

@@ -17,7 +17,18 @@ import {
   updateCustomerSchema
 } from "./customer.schemas.js";
 
+import { getDueAgingController } from "../reports/report.controller.js";
+import { dueAgingQuerySchema } from "../reports/report.schemas.js";
+
 export const customerRouter = Router();
+
+customerRouter.get(
+  "/due-aging",
+  requirePermission(PERMISSIONS.CUSTOMER_READ),
+  validate({ query: dueAgingQuerySchema }),
+  getDueAgingController
+);
+
 customerRouter.get(
   "/",
   requirePermission(PERMISSIONS.CUSTOMER_READ),

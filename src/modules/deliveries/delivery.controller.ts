@@ -6,7 +6,11 @@ import {
   createVehicle,
   getDelivery,
   listDeliveries,
-  updateDeliveryStatus
+  listDrivers,
+  listVehicles,
+  updateDeliveryStatus,
+  updateDriver,
+  updateVehicle
 } from "./delivery.service.js";
 
 export async function createDriverController(req: Request, res: Response) {
@@ -17,11 +21,63 @@ export async function createDriverController(req: Request, res: Response) {
   });
 }
 
+export async function listDriversController(req: Request, res: Response) {
+  if (!req.auth) throw errors.unauthorized();
+  const result = await listDrivers(
+    req.auth.shopId,
+    req.validated?.query as Parameters<typeof listDrivers>[1]
+  );
+  res.json({
+    success: true,
+    data: result.items,
+    meta: { total: result.total, page: result.page, limit: result.limit, pages: result.pages }
+  });
+}
+
+export async function updateDriverController(req: Request, res: Response) {
+  if (!req.auth) throw errors.unauthorized();
+  const { id } = req.validated?.params as { id: string };
+  res.json({
+    success: true,
+    data: await updateDriver(
+      id,
+      req.auth.shopId,
+      req.validated?.body as Parameters<typeof updateDriver>[2]
+    )
+  });
+}
+
 export async function createVehicleController(req: Request, res: Response) {
   if (!req.auth) throw errors.unauthorized();
   res.status(201).json({
     success: true,
     data: await createVehicle(req.validated?.body as Parameters<typeof createVehicle>[0], req.auth.shopId)
+  });
+}
+
+export async function listVehiclesController(req: Request, res: Response) {
+  if (!req.auth) throw errors.unauthorized();
+  const result = await listVehicles(
+    req.auth.shopId,
+    req.validated?.query as Parameters<typeof listVehicles>[1]
+  );
+  res.json({
+    success: true,
+    data: result.items,
+    meta: { total: result.total, page: result.page, limit: result.limit, pages: result.pages }
+  });
+}
+
+export async function updateVehicleController(req: Request, res: Response) {
+  if (!req.auth) throw errors.unauthorized();
+  const { id } = req.validated?.params as { id: string };
+  res.json({
+    success: true,
+    data: await updateVehicle(
+      id,
+      req.auth.shopId,
+      req.validated?.body as Parameters<typeof updateVehicle>[2]
+    )
   });
 }
 

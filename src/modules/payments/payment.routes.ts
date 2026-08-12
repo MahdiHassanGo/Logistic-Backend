@@ -7,6 +7,7 @@ import {
   createPaymentController,
   getPaymentController,
   listPaymentsController,
+  renderPaymentReceiptPdfController,
   reversePaymentController
 } from "./payment.controller.js";
 import {
@@ -35,6 +36,12 @@ paymentRouter.get(
   requirePermission(PERMISSIONS.PAYMENT_READ),
   validate({ params: paymentIdParamsSchema }),
   getPaymentController
+);
+paymentRouter.get(
+  "/:id/pdf",
+  requirePermission(PERMISSIONS.PAYMENT_READ),
+  validate({ params: paymentIdParamsSchema }),
+  renderPaymentReceiptPdfController
 );
 paymentRouter.post(
   "/:id/reverse",

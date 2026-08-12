@@ -43,6 +43,42 @@ export const updateDeliveryStatusSchema = z.strictObject({
   longitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).optional()
 });
 
+export const driverIdParamsSchema = z.strictObject({ id: z.string().uuid() });
+
+export const driverListQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"]).optional(),
+  search: z.string().trim().optional()
+});
+
+export const updateDriverSchema = z.strictObject({
+  userId: z.string().uuid().optional().nullable(),
+  driverCode: z.string().trim().toUpperCase().min(2).max(50).optional(),
+  name: z.string().trim().min(2).max(150).optional(),
+  phone: z.string().trim().min(7).max(20).optional(),
+  licenseNo: z.string().trim().max(100).optional().nullable(),
+  status: z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"]).optional(),
+  notes: z.string().trim().max(500).optional().nullable()
+});
+
+export const vehicleIdParamsSchema = z.strictObject({ id: z.string().uuid() });
+
+export const vehicleListQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.enum(["AVAILABLE", "IN_USE", "MAINTENANCE", "INACTIVE"]).optional(),
+  search: z.string().trim().optional()
+});
+
+export const updateVehicleSchema = z.strictObject({
+  registrationNumber: z.string().trim().toUpperCase().min(3).max(50).optional(),
+  type: z.string().trim().min(2).max(80).optional(),
+  capacity: money.optional().nullable(),
+  status: z.enum(["AVAILABLE", "IN_USE", "MAINTENANCE", "INACTIVE"]).optional(),
+  notes: z.string().trim().max(500).optional().nullable()
+});
+
 export const deliveryIdParamsSchema = z.strictObject({ id: z.string().uuid() });
 
 export const deliveryListQuerySchema = z.strictObject({

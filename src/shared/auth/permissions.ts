@@ -20,11 +20,15 @@ export const PERMISSIONS = {
   DELIVERY_ASSIGN: "delivery.assign",
   DELIVERY_UPDATE_STATUS: "delivery.update_status",
   DASHBOARD_READ: "dashboard.read",
+  INVOICE_READ: "invoice.read",
   REPORT_READ: "report.read",
   REPORT_EXPORT: "report.export",
   SMS_RESEND: "sms.resend",
   SETTINGS_SMS: "settings.sms",
-  SETTINGS_BACKUP: "settings.backup"
+  SETTINGS_COMPANY: "settings.company",
+  SETTINGS_BACKUP: "settings.backup",
+  DRIVER_UPDATE: "driver.update",
+  VEHICLE_UPDATE: "vehicle.update"
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

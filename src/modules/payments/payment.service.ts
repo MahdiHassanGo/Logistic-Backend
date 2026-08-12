@@ -287,3 +287,96 @@ export async function listPayments(
   ]);
   return { items, total, page: input.page, limit: input.limit, pages: Math.ceil(total / input.limit) };
 }
+
+export async function renderPaymentReceiptPdf(id: string, shopId: string): Promise<{ filename: string; contentType: string; content: Buffer }> {
+  const payment = await getPayment(id, shopId);
+  const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Payment Receipt ${payment.receiptNumber}</title>
+  <style>
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #333; }
+    .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+    .shop-title { font-size: 24px; font-weight: bold; color: #16a34a; }
+    .receipt-title { font-size: 20px; text-align: right; font-weight: bold; }
+    .meta-table { width: 100%; margin-bottom: 30px; }
+    .meta-table td { vertical-align: top; width: 50%; }
+    .allocations-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    .allocations-table th, .allocations-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    .allocations-table th { background: #f8fafc; }
+    .total-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; text-align: right; font-size: 18px; font-weight: bold; margin-bottom: 30px; }
+    .text-right { text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="shop-title">${shop?.name ?? "LogiKhata Enterprise"}</div>
+      <div>${shop?.address ?? ""}</div>
+      <div>Phone: ${shop?.phone ?? ""}</div>
+    </div>
+    <div>
+      <div class="receipt-title">PAYMENT RECEIPT</div>
+      <div># ${payment.receiptNumber}</div>
+      <div>Date: ${new Date(payment.paymentDate).toLocaleDateString()}</div>
+      <div>Status: ${payment.status}</div>
+    </div>
+  </div>
+
+  <table class="meta-table">
+    <tr>
+      <td>
+        <strong>Received From:</strong><br>
+        ${payment.customer.name}<br>
+        Phone: ${payment.customer.phone}<br>
+        ${payment.customer.address ? payment.customer.address + "<br>" : ""}
+      </td>
+      <td>
+        <strong>Payment Method:</strong> ${payment.method}<br>
+        <strong>Reference:</strong> ${payment.reference ?? "N/A"}<br>
+        <strong>Collected By:</strong> ${payment.collectedBy.name}
+      </td>
+    </tr>
+  </table>
+
+  <div class="total-box">
+    Amount Received: ৳${payment.amount}
+  </div>
+
+  <h3>Allocated Invoices</h3>
+  <table class="allocations-table">
+    <thead>
+      <tr>
+        <th>Invoice Number</th>
+        <th>Invoice Date</th>
+        <th class="text-right">Grand Total</th>
+        <th class="text-right">Allocated Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${payment.allocations
+        .map(
+          (alloc) => `
+        <tr>
+          <td>${alloc.invoice.invoiceNumber}</td>
+          <td>${new Date(alloc.invoice.invoiceDate).toLocaleDateString()}</td>
+          <td class="text-right">৳${alloc.invoice.grandTotal}</td>
+          <td class="text-right">৳${alloc.amount}</td>
+        </tr>
+      `
+        )
+        .join("")}
+    </tbody>
+  </table>
+</body>
+</html>`;
+
+  return {
+    filename: `Receipt_${payment.receiptNumber}.pdf`,
+    contentType: "text/html",
+    content: Buffer.from(html, "utf-8")
+  };
+}

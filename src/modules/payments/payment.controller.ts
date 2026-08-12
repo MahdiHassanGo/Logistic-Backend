@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { errors } from "../../shared/errors/app-error.js";
-import { createPayment, getPayment, listPayments, reversePayment } from "./payment.service.js";
+import { createPayment, getPayment, listPayments, renderPaymentReceiptPdf, reversePayment } from "./payment.service.js";
 import type { CreatePaymentInput } from "./payment.schemas.js";
 
 export async function createPaymentController(req: Request, res: Response) {
@@ -24,6 +24,16 @@ export async function getPaymentController(req: Request, res: Response) {
   if (!req.auth) throw errors.unauthorized();
   const { id } = req.validated?.params as { id: string };
   res.json({ success: true, data: await getPayment(id, req.auth.shopId) });
+}
+
+export async function renderPaymentReceiptPdfController(req: Request, res: Response) {
+  if (!req.auth) throw errors.unauthorized();
+  const { id } = req.validated?.params as { id: string };
+  const pdf = await renderPaymentReceiptPdf(id, req.auth.shopId);
+
+  res.setHeader("Content-Type", pdf.contentType);
+  res.setHeader("Content-Disposition", `inline; filename="${pdf.filename}"`);
+  res.send(pdf.content);
 }
 
 export async function listPaymentsController(req: Request, res: Response) {
