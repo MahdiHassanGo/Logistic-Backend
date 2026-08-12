@@ -1,10 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { updateCustomerSchema } from "../src/modules/customers/customer.schemas.js";
 import { driverListQuerySchema, updateDriverSchema, updateVehicleSchema } from "../src/modules/deliveries/delivery.schemas.js";
 import { invoiceListQuerySchema } from "../src/modules/invoices/invoice.schemas.js";
 import { exportReportSchema } from "../src/modules/reports/report.schemas.js";
 import { getSmsSettings } from "../src/modules/sms/sms.service.js";
 
 describe("LogiKhata New Backend Endpoints & Validation", () => {
+  it("validates update customer schema with status and optional fields", () => {
+    const parsed = updateCustomerSchema.parse({
+      name: "Acme Store",
+      phone: "01700000000",
+      status: "ACTIVE",
+      notes: null,
+      creditLimit: "5000"
+    });
+    expect(parsed.name).toBe("Acme Store");
+    expect(parsed.status).toBe("ACTIVE");
+    expect(parsed.notes).toBeNull();
+  });
+
   it("validates invoice list query parameters correctly", () => {
     const valid = invoiceListQuerySchema.parse({ page: "1", limit: "20", status: "UNPAID" });
     expect(valid.page).toBe(1);

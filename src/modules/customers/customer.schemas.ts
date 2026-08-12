@@ -5,20 +5,31 @@ const money = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/, "Use a positive decimal
 export const createCustomerSchema = z.strictObject({
   name: z.string().trim().min(2).max(150),
   phone: z.string().trim().min(7).max(20),
-  alternatePhone: z.string().trim().min(7).max(20).optional(),
-  businessName: z.string().trim().max(180).optional(),
-  address: z.string().trim().max(500).optional(),
-  area: z.string().trim().max(100).optional(),
-  district: z.string().trim().max(100).optional(),
-  notes: z.string().trim().max(1500).optional(),
+  alternatePhone: z.string().trim().min(7).max(20).optional().nullable(),
+  businessName: z.string().trim().max(180).optional().nullable(),
+  address: z.string().trim().max(500).optional().nullable(),
+  area: z.string().trim().max(100).optional().nullable(),
+  district: z.string().trim().max(100).optional().nullable(),
+  notes: z.string().trim().max(1500).optional().nullable(),
   creditLimit: money.default("0"),
   openingBalance: money.default("0"),
-  avatarUrl: z.string().url().optional()
+  avatarUrl: z.string().url().optional().nullable()
 });
 
-export const updateCustomerSchema = createCustomerSchema
-  .omit({ openingBalance: true })
-  .partial()
+export const updateCustomerSchema = z
+  .strictObject({
+    name: z.string().trim().min(2).max(150).optional(),
+    phone: z.string().trim().min(7).max(20).optional(),
+    alternatePhone: z.string().trim().min(7).max(20).optional().nullable(),
+    businessName: z.string().trim().max(180).optional().nullable(),
+    address: z.string().trim().max(500).optional().nullable(),
+    area: z.string().trim().max(100).optional().nullable(),
+    district: z.string().trim().max(100).optional().nullable(),
+    notes: z.string().trim().max(1500).optional().nullable(),
+    creditLimit: money.optional(),
+    avatarUrl: z.string().url().optional().nullable(),
+    status: z.enum(["ACTIVE", "INACTIVE"]).optional()
+  })
   .refine((value) => Object.keys(value).length > 0, { message: "At least one field is required" });
 
 export const customerIdParamsSchema = z.strictObject({ id: z.string().uuid() });
