@@ -5,12 +5,14 @@ import { validate } from "../../shared/middleware/validate.js";
 import {
   createUserController,
   listUsersController,
+  updateUserController,
   updateUserPermissionsController,
   updateUserStatusController
 } from "./user.controller.js";
 import {
   createUserSchema,
   updateUserPermissionsSchema,
+  updateUserSchema,
   updateUserStatusSchema,
   userIdParamsSchema,
   userListQuerySchema
@@ -20,6 +22,11 @@ export const userRouter = Router();
 userRouter.use(requirePermission(PERMISSIONS.USER_MANAGE));
 userRouter.get("/", validate({ query: userListQuerySchema }), listUsersController);
 userRouter.post("/", validate({ body: createUserSchema }), createUserController);
+userRouter.patch(
+  "/:id",
+  validate({ params: userIdParamsSchema, body: updateUserSchema }),
+  updateUserController
+);
 userRouter.patch(
   "/:id/status",
   validate({ params: userIdParamsSchema, body: updateUserStatusSchema }),

@@ -5,6 +5,7 @@ import {
   createUser,
   listUsers,
   replaceUserPermissionOverrides,
+  updateUser,
   updateUserStatus
 } from "./user.service.js";
 
@@ -16,6 +17,18 @@ export async function createUserController(req: Request, res: Response) {
     req.auth.role
   );
   res.status(201).json({ success: true, data });
+}
+
+export async function updateUserController(req: Request, res: Response) {
+  if (!req.auth) throw errors.unauthorized();
+  const { id } = req.validated?.params as { id: string };
+  const data = await updateUser(
+    id,
+    req.auth.shopId,
+    req.validated?.body as Parameters<typeof updateUser>[2],
+    req.auth.role
+  );
+  res.json({ success: true, data });
 }
 
 export async function listUsersController(req: Request, res: Response) {

@@ -11,6 +11,14 @@ export const createUserSchema = z.strictObject({
   role: userRole.default("OPERATOR")
 });
 
+export const updateUserSchema = z.strictObject({
+  name: z.string().trim().min(2).max(120).optional(),
+  email: z.string().trim().toLowerCase().email().optional().nullable(),
+  phone: z.string().trim().min(7).max(20).optional().nullable(),
+  password: z.string().min(10).max(128).optional(),
+  role: userRole.optional()
+});
+
 export const updateUserStatusSchema = z.strictObject({
   status: z.enum(["ACTIVE", "INACTIVE", "LOCKED"])
 });

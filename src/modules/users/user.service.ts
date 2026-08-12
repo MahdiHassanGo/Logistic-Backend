@@ -45,6 +45,49 @@ export async function createUser(
   });
 }
 
+export async function updateUser(
+  id: string,
+  shopId: string,
+  input: {
+    name?: string;
+    email?: string | null;
+    phone?: string | null;
+    password?: string;
+    role?: UserRole;
+  },
+  actorRole: UserRole
+) {
+  const existing = await prisma.user.findFirst({ where: { id, shopId, deletedAt: null } });
+  if (!existing) throw errors.notFound("User");
+
+  if (input.role === "OWNER" && actorRole !== "OWNER") {
+    throw errors.forbidden("Only an owner can promote a user to owner role");
+  }
+
+  const { password, ...rest } = input;
+  const passwordHash = password ? await hashPassword(password) : undefined;
+
+  return prisma.user.update({
+    where: { id },
+    data: {
+      ...rest,
+      ...(passwordHash ? { passwordHash } : {})
+    },
+    select: {
+      id: true,
+      shopId: true,
+      name: true,
+      username: true,
+      email: true,
+      phone: true,
+      role: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true
+    }
+  });
+}
+
 export async function listUsers(
   shopId: string,
   input: {
